@@ -86,6 +86,74 @@ sub parse_resource
 
 ###############################################
 
+sub add_exception_to_list
+{
+    my $name = shift;
+    my $except_list_ref = shift || die "no except list";
+    my $date_or_week = shift;
+
+    if( exists $map_stat_ref->{$res} )
+    {
+        print STDERR "ERROR: resource $res already defined for type $type.\n";
+        exit;
+    }
+    else
+    {
+        $map_stat_ref->{$res} = 0;
+        print "DBG: added resource $res to type $type.\n";       # DBG
+    }
+}
+
+###############################################
+
+sub parse_exception
+{
+    my $a = shift;
+    my $map_name_on_except_ref = shift || die "no 'name on except' map";
+
+    my @wrds = split( / /, $a );
+
+    if( $#wrds < 2 )
+    {
+        print STDERR "ERROR: exception without resource name.\n";
+        exit;
+    }
+
+    shift( @wrds );
+
+    my $name=$wrds[0];
+
+    shift( @wrds );
+
+    print STDERR "DBG: exception for resource $name.\n";       # DBG
+
+    my $except_list_ref;
+
+    if( exists $map_name_on_except_ref->{$name} )
+    {
+        print STDERR "DBG: exception for existing resource $name.\n";       # DBG
+        $except_list_ref = $map_name_on_except_ref->{$name};
+    }
+    else
+    {
+        print STDERR "DBG: exception for resource $name.\n";       # DBG
+
+        my @except_list;
+
+        $except_list_ref = \@except_list;
+
+        $map_name_on_except_ref->{$name} = $except_list_ref;
+    }
+
+
+    foreach( @wrds )
+    {
+        add_resource_to_set( $name, $stat_ref, $_ );
+    }
+}
+
+###############################################
+
 sub read_resources
 {
     my $filename = shift;
