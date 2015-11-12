@@ -9,6 +9,26 @@ my $VER="1.0";
 
 ###############################################
 
+sub add_resource_to_set
+{
+    my $type = shift;
+    my $map_stat_ref = shift || die "no stat map";
+    my $res = shift;
+
+    if( exists $map_stat_ref->{$res} )
+    {
+        print STDERR "ERROR: resource $res already defined for type $type.\n";
+        exit;
+    }
+    else
+    {
+        $map_stat_ref->{$res} = 0;
+        print "DBG: added resource $res to type $type.\n";       # DBG
+    }
+}
+
+###############################################
+
 sub parse_resource
 {
     my $a = shift;
@@ -32,19 +52,17 @@ sub parse_resource
     {
         my %map_stat;
 
-        $map_type_on_stat_ref->{$type} = \%map_stat;
+        $stat_ref = \%map_stat;
+
+        $map_type_on_stat_ref->{$type} = $stat_ref;
         print "DBG: new resource type: " . $type . "\n";       # DBG
     }
 
 
     foreach( @wrds )
     {
-#        $_ = "\u$_";
-        print "DBG: type $type $_\n";       # DBG
+        add_resource_to_set( $type, $stat_ref, $_ );
     }
-#    $a = join(" ",@wrds);
-
-#    return $a;
 }
 
 ###############################################
