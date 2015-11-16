@@ -86,21 +86,46 @@ sub parse_resource
 
 ###############################################
 
+sub convert_date_or_week_to_week
+{
+    my $date_or_week = shift;
+
+    if( m#cw([0-9]*)# )
+    {
+        return $1;
+    }
+    elsif ( m#([0-9]*)-([0-9]*)-([0-9]*) #)
+    {
+    }
+    else
+    {
+        print STDERR "FATAL: date in unknown format $_\n";
+        exit;
+    }
+
+    return 0;
+}
+
+
+###############################################
+
 sub add_exception_to_list
 {
     my $name = shift;
     my $except_list_ref = shift || die "no except list";
     my $date_or_week = shift;
 
-    if( exists $map_stat_ref->{$res} )
+    my $week = convert_date_or_week_to_week( $date_or_week );
+
+    if( exists $except_list_ref->{$week} )
     {
-        print STDERR "ERROR: resource $res already defined for type $type.\n";
+        print STDERR "ERROR: week $week is already added to exception list for resource $name.\n";
         exit;
     }
     else
     {
-        $map_stat_ref->{$res} = 0;
-        print "DBG: added resource $res to type $type.\n";       # DBG
+        $except_list_ref->{$week} = 1;
+        print STDERR "DBG: added week $week to exception list for resource $name.\n";       # DBG
     }
 }
 
