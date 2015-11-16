@@ -214,8 +214,8 @@ sub parse_exception
 sub read_resources
 {
     my $filename = shift;
-    my $res_map_ref = shift;
-    my $excep_map_ref = shift;
+    my $map_res_ref = shift;
+    my $map_except_ref = shift;
 
     unless( -e $filename )
     {
@@ -226,10 +226,6 @@ sub read_resources
     my $lines = 0;
     my $except_lines=0;
     my $resrc_lines=0;
-
-    my %map_res;
-    my %map_except;
-
 
     print "Reading $filename...\n";
     open RN, "<", $filename;
@@ -252,14 +248,14 @@ sub read_resources
         print STDERR "DBG: exception line $_\n";
         $except_lines++;
 
-        parse_exception( $lines, $_, \%map_except );
+        parse_exception( $lines, $_, $map_except_ref );
     }
     elsif ( m#([a-zA-Z0-9]*) #)
     {
         print STDERR "DBG: resource line $_\n";
         $resrc_lines++;
 
-        parse_resource( $lines, $_, \%map_res );
+        parse_resource( $lines, $_, $map_res_ref );
     }
     else
     {
@@ -286,7 +282,12 @@ if( $num_args < 2 || $num_args > 3 )
 $resources = $ARGV[0];
 shift( @ARGV );
 
-read_resources( $resources );
+my %map_res;
+my %map_except;
+
+read_resources( $resources, \%map_res, \%map_except );
+
+
 
 exit;
 
