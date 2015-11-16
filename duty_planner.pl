@@ -239,7 +239,7 @@ sub read_resources
         chomp;
         $lines++;
 
-# sample tick:
+# sample resource file:
 #td ac sk ab abu skv ol
 #18p ac sk abu skv ol am hk
 #od ac ab abu skv mk
