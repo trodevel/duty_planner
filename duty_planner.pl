@@ -270,6 +270,60 @@ close RN;
 
 ###############################################
 
+sub find_min_resource
+{
+    my $map_stat_ref = shift;
+    my $except_1 = shift;
+    my $except_2 = shift;
+    my $map_except_ref = shift;
+
+    my $res_min_name = '';
+    my $res_min = -1;
+
+
+    foreach $res ( @{$map_stat_ref} )
+    {
+        # first iteration to fill initial element
+        if( $res_min == -1 )
+        {
+            $res_min_name = $res;
+            $res_min = $map_stat_ref->{$res};
+            next;
+        }
+
+        if( $map_stat_ref->{$res} < $res_min )
+        {
+            $res_min_name = $res;
+            $res_min      = $map_stat_ref->{$res};
+        }
+    }
+
+    return ($res_min_name, $res_min);
+}
+
+###############################################
+sub find_min_resource_type
+{
+    my $type = shift;
+    my $except_1 = shift;
+    my $except_2 = shift;
+    my $map_res_ref = shift;
+    my $map_except_ref = shift;
+
+
+    if( not exists $map_res_ref->{$type} )
+    {
+        print STDERR "FATAL: cannot find resource type $type\n";       # DBG
+        exit
+    }
+
+    my $stat_ref = $map_res_ref->{$type};
+
+    return find_min_resource( $stat_ref, $except_1, $except_2, $map_except_ref );
+}
+
+###############################################
+
 sub generate_plan
 {
     my $map_res_ref = shift;
