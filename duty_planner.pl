@@ -270,24 +270,49 @@ close RN;
 
 ###############################################
 
+sub generate_plan
+{
+    my $map_res_ref = shift;
+    my $map_except_ref = shift;
+
+    my $week = shift;
+
+    my $type_1 = shift;
+    my $type_2 = shift;
+    my $type_3 = shift;
+}
+
+
+###############################################
+
 print "duty_planner ver. $VER\n";
 
-$num_args = $#ARGV + 1;
+my $num_args = $#ARGV + 1;
 if( $num_args < 2 || $num_args > 3 )
 {
     print STDERR "\nUsage: duty_planner.sh <resources.txt> <status.txt> [<week>]\n";
     exit;
 }
 
-$resources = $ARGV[0];
-shift( @ARGV );
+my $resources = $ARGV[0];
+my $status = $ARGV[1];
+
+my $week = 1;
+if( $num_args == 3 )
+{
+    $week = $ARGV[2];
+}
+
+print STDERR "resources  = $resources\n";
+print STDERR "status     = $status\n";
+print STDERR "first week = $week\n";
 
 my %map_res;
 my %map_except;
 
 read_resources( $resources, \%map_res, \%map_except );
 
-
+generate_plan( \%map_res, \%map_except, $week, 'td', '18p', 'od' );
 
 exit;
 
