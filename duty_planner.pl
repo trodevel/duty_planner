@@ -243,7 +243,7 @@ sub read_resources
 #td ac sk ab abu skv ol
 #18p ac sk abu skv ol am hk
 #od ac ab abu skv mk
-#except ac cw17 506 507
+#except ac cw17 2015-5-6 2015-5-7
 #except sk
 #except abu
 
