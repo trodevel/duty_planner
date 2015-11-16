@@ -24,19 +24,29 @@
 
 # 1.0 - FB10 - initial commit
 
+
 my $VER="1.0";
+
+###############################################
+
+#use strict;
+use warnings;
+use 5.010;
+
+use Time::Piece;    # date_to_week()
 
 ###############################################
 
 sub add_resource_to_set
 {
+    my $line = shift;
     my $type = shift;
     my $map_stat_ref = shift || die "no stat map";
     my $res = shift;
 
     if( exists $map_stat_ref->{$res} )
     {
-        print STDERR "ERROR: resource $res already defined for type $type.\n";
+        print STDERR "ERROR: resource $res already defined for type $type, line $line.\n";
         exit;
     }
     else
@@ -50,6 +60,7 @@ sub add_resource_to_set
 
 sub parse_resource
 {
+    my $line = shift;
     my $a = shift;
     my $map_type_on_stat_ref = shift || die "no type on stat map";
 
@@ -80,8 +91,22 @@ sub parse_resource
 
     foreach( @wrds )
     {
-        add_resource_to_set( $type, $stat_ref, $_ );
+        add_resource_to_set( $line, $type, $stat_ref, $_ );
     }
+}
+
+###############################################
+
+sub date_to_week
+{
+
+    my $date = shift;
+
+    my $dt = Time::Piece->strptime($date, '%Y-%m-%d');
+
+    my $week = $dt->strftime('%W');
+
+    return $week;
 }
 
 ###############################################
@@ -94,8 +119,9 @@ sub convert_date_or_week_to_week
     {
         return $1;
     }
-    elsif ( m#([0-9]*)-([0-9]*)-([0-9]*) #)
+    elsif ( m#([0-9]*)-([0-9]*)-([0-9]*)#)
     {
+        return date_to_week( $_ );
     }
     else
     {
@@ -111,6 +137,7 @@ sub convert_date_or_week_to_week
 
 sub add_exception_to_list
 {
+    my $line = shift;
     my $name = shift;
     my $except_list_ref = shift || die "no except list";
     my $date_or_week = shift;
@@ -119,8 +146,7 @@ sub add_exception_to_list
 
     if( exists $except_list_ref->{$week} )
     {
-        print STDERR "ERROR: week $week is already added to exception list for resource $name.\n";
-        exit;
+        print STDERR "WARNING: week $week is already added to exception list for resource $name, line $line.\n";
     }
     else
     {
@@ -133,15 +159,21 @@ sub add_exception_to_list
 
 sub parse_exception
 {
+    my $line = shift;
     my $a = shift;
     my $map_name_on_except_ref = shift || die "no 'name on except' map";
 
     my @wrds = split( / /, $a );
 
+    if( $#wrds < 1 )
+    {
+        print STDERR "ERROR: exception without resource name, line $line.\n";
+        exit;
+    }
+
     if( $#wrds < 2 )
     {
-        print STDERR "ERROR: exception without resource name.\n";
-        exit;
+        print STDERR "WARNING: empty exception list for resource, line $line.\n";
     }
 
     shift( @wrds );
@@ -163,9 +195,9 @@ sub parse_exception
     {
         print STDERR "DBG: exception for resource $name.\n";       # DBG
 
-        my @except_list;
+        my %except_list;
 
-        $except_list_ref = \@except_list;
+        $except_list_ref = \%except_list;
 
         $map_name_on_except_ref->{$name} = $except_list_ref;
     }
@@ -173,7 +205,7 @@ sub parse_exception
 
     foreach( @wrds )
     {
-        add_resource_to_set( $name, $stat_ref, $_ );
+        add_exception_to_list( $line, $name, $except_list_ref, $_ );
     }
 }
 
@@ -196,6 +228,7 @@ sub read_resources
     my $resrc_lines=0;
 
     my %map_res;
+    my %map_except;
 
 
     print "Reading $filename...\n";
@@ -218,17 +251,19 @@ sub read_resources
     {
         print STDERR "DBG: exception line $_\n";
         $except_lines++;
+
+        parse_exception( $lines, $_, \%map_except );
     }
     elsif ( m#([a-zA-Z0-9]*) #)
     {
         print STDERR "DBG: resource line $_\n";
         $resrc_lines++;
 
-        parse_resource( $_, \%map_res );
+        parse_resource( $lines, $_, \%map_res );
     }
     else
     {
-        print STDERR "DBG: unknown line $_\n";
+        print STDERR "DBG: unknown line $lines, $_\n";
         next;
     }
 }
