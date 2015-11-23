@@ -360,7 +360,7 @@ sub generate_plan
         my ( $res_1, $res_min_1 ) = find_min_resource_type( $type_1, 0, $prev_duty, $map_res_ref, $map_except_ref );
         check_iter_result( $res_min_1, $type_1, $i );
 
-        my ( $res_2, $res_min_2 ) = find_min_resource_type( $type_2, $res_1, 0, $map_res_ref, $map_except_ref );
+        my ( $res_2, $res_min_2 ) = find_min_resource_type( $type_2, $res_1, $prev_duty, $map_res_ref, $map_except_ref );
         check_iter_result( $res_min_2, $type_2, $i );
 
         my ( $res_3, $res_min_3 ) = find_min_resource_type( $type_3, $res_1, $res_2, $map_res_ref, $map_except_ref );
