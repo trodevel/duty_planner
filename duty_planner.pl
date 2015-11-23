@@ -348,6 +348,31 @@ sub check_iter_result
 
 ###############################################
 
+sub validate_results
+{
+    my( $res_1, $res_2, $res_3 ) = @_;
+
+    if( $res_1 eq $res_2 )
+    {
+        print STDERR "ERROR: validation failed: $res_1 $res_2\n";
+        exit;
+    }
+
+    if( $res_1 eq $res_3 )
+    {
+        print STDERR "ERROR: validation failed: $res_1 $res_3\n";
+        exit;
+    }
+
+    if( $res_2 eq $res_3 )
+    {
+        print STDERR "ERROR: validation failed: $res_2 $res_3\n";
+        exit;
+    }
+}
+
+###############################################
+
 sub generate_plan
 {
     my $map_res_ref = shift;
@@ -374,6 +399,8 @@ sub generate_plan
 
         my ( $res_3, $res_min_3 ) = find_min_resource_type( $type_3, $res_1, $res_2, $map_res_ref, $map_except_ref );
         check_iter_result( $res_min_3, $type_3, $i );
+
+        validate_results( $res_1, $res_2, $res_3 );
 
         $prev_duty = $res_3;
 
