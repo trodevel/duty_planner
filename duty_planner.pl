@@ -281,7 +281,7 @@ sub find_min_resource
     my $res_min = -1;
 
 
-    foreach my $res ( keys %$map_stat_ref )
+    foreach my $res ( sort keys %$map_stat_ref )
     {
         # first iteration to fill initial element
         if( $res_min == -1 )
@@ -293,6 +293,12 @@ sub find_min_resource
 
         if( $map_stat_ref->{$res} < $res_min )
         {
+            if( ( $res eq $except_1 ) || ( $res eq $except_2 ) )
+            {
+                print "DBG: ignore $res (except)\n";
+                next;
+            }
+
             $res_min_name = $res;
             $res_min      = $map_stat_ref->{$res};
         }
@@ -309,6 +315,8 @@ sub find_min_resource_type
     my $except_2 = shift;
     my $map_res_ref = shift;
     my $map_except_ref = shift;
+
+    print "DBG: find_min_resource_type $type $except_1 $except_2\n";
 
 
     if( not exists $map_res_ref->{$type} )
@@ -353,6 +361,7 @@ sub generate_plan
 
     my $prev_duty = 0;
 
+    print "week: $type_1 $type_2 $type_3\n";
 
     for( $i = $week; $i <= 52; $i = $i + 1 )
     {
@@ -372,7 +381,7 @@ sub generate_plan
         $map_res_ref->{$type_2}->{$res_2}++;
         $map_res_ref->{$type_3}->{$res_3}++;
 
-        print "$i: $res_1 $res_2 $res_3\n";
+        print "$i: $res_1 $res_2 $res_3 ---- $map_res_ref->{$type_1}->{$res_1} $map_res_ref->{$type_2}->{$res_2} $map_res_ref->{$type_3}->{$res_3}\n";
     }
 }
 
