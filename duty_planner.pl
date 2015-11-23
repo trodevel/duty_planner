@@ -286,6 +286,12 @@ sub find_min_resource
         # first iteration to fill initial element
         if( $res_min == -1 )
         {
+            if( ( $res eq $except_1 ) || ( $res eq $except_2 ) )
+            {
+                print "DBG: ignore $res (except)\n";
+                next;
+            }
+
             $res_min_name = $res;
             $res_min = $map_stat_ref->{$res};
             next;
@@ -316,7 +322,7 @@ sub find_min_resource_type
     my $map_res_ref = shift;
     my $map_except_ref = shift;
 
-    print "DBG: find_min_resource_type $type $except_1 $except_2\n";
+    #print "DBG: find_min_resource_type $type $except_1 $except_2\n";
 
 
     if( not exists $map_res_ref->{$type} )
