@@ -281,7 +281,7 @@ sub find_min_resource
     my $res_min = -1;
 
 
-    foreach my $res ( keys \%map_stat_ref )
+    foreach my $res ( keys %$map_stat_ref )
     {
         # first iteration to fill initial element
         if( $res_min == -1 )
