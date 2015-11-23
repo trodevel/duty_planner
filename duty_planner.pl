@@ -334,6 +334,25 @@ sub generate_plan
     my $type_1 = shift;
     my $type_2 = shift;
     my $type_3 = shift;
+
+    my $prev_duty = 0;
+
+
+    for( $i = $week; $i <= 52; $i = $i + 1 )
+    {
+
+        my ( $res_1, $res_min_1 ) = find_min_resource_type( $type_1, 0, $prev_duty, $map_res_ref, $map_except_ref );
+        my ( $res_2, $res_min_2 ) = find_min_resource_type( $type_2, $res_1, 0, $map_res_ref, $map_except_ref );
+        my ( $res_3, $res_min_3 ) = find_min_resource_type( $type_3, $res_1, $res_2, $map_res_ref, $map_except_ref );
+
+        $prev_duty = $res_3;
+
+        $map_res_ref->{$type_1}->{$res_1}++;
+        $map_res_ref->{$type_2}->{$res_2}++;
+        $map_res_ref->{$type_3}->{$res_3}++;
+
+        print "$i: $res_1 $res_2 $res_3\n";
+    }
 }
 
 
