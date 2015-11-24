@@ -270,6 +270,20 @@ close RN;
 
 ###############################################
 
+sub is_constrained
+{
+    my ( $res, $except_1, $except_2, $map_except_ref ) = @_;
+
+    if( ( $res eq $except_1 ) || ( $res eq $except_2 ) )
+    {
+        return 1;
+    }
+
+    return 0;
+}
+
+###############################################
+
 sub find_min_resource
 {
     my $map_stat_ref = shift;
@@ -286,7 +300,7 @@ sub find_min_resource
         # first iteration to fill initial element
         if( $res_min == -1 )
         {
-            if( ( $res eq $except_1 ) || ( $res eq $except_2 ) )
+            if( is_constrained( $res, $except_1, $except_2, $map_except_ref ) )
             {
                 print "DBG: ignore $res (except)\n";
                 next;
@@ -299,7 +313,7 @@ sub find_min_resource
 
         if( $map_stat_ref->{$res} < $res_min )
         {
-            if( ( $res eq $except_1 ) || ( $res eq $except_2 ) )
+            if( is_constrained( $res, $except_1, $except_2, $map_except_ref ) )
             {
                 print "DBG: ignore $res (except)\n";
                 next;
