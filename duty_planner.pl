@@ -403,6 +403,25 @@ sub validate_results
 
 ###############################################
 
+sub get_absence_for_week
+{
+    my ( $map_except_ref, $week ) = @_;
+
+    my @res=();
+
+    foreach my $res ( sort keys %$map_except_ref )
+    {
+        if( exists $map_except_ref->{$res}->{$week} )
+        {
+            push @res, $res;
+        }
+    }
+
+    return @res;
+}
+
+###############################################
+
 sub generate_plan
 {
     my $map_res_ref = shift;
@@ -438,7 +457,9 @@ sub generate_plan
         $map_res_ref->{$type_2}->{$res_2}++;
         $map_res_ref->{$type_3}->{$res_3}++;
 
-        print "$i: $res_1 $res_2 $res_3 ---- $map_res_ref->{$type_1}->{$res_1} $map_res_ref->{$type_2}->{$res_2} $map_res_ref->{$type_3}->{$res_3}\n";
+        my @absence = get_absence_for_week( $map_except_ref, $i );
+
+        print "$i: $res_1 $res_2 $res_3 absence: @absence ---- $map_res_ref->{$type_1}->{$res_1} $map_res_ref->{$type_2}->{$res_2} $map_res_ref->{$type_3}->{$res_3}\n";
     }
 }
 
