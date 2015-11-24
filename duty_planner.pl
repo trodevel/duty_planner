@@ -322,7 +322,7 @@ sub find_min_resource
 
         if( $map_stat_ref->{$res} < $res_min )
         {
-            if( is_constrained( $res, $except_1, $except_2, $map_except_ref ) )
+            if( is_constrained( $res, $except_1, $except_2, $map_except_ref, $week ) )
             {
                 print "DBG: ignore $res (except)\n";
                 next;
