@@ -272,11 +272,19 @@ close RN;
 
 sub is_constrained
 {
-    my ( $res, $except_1, $except_2, $map_except_ref ) = @_;
+    my ( $res, $except_1, $except_2, $map_except_ref, $week ) = @_;
 
     if( ( $res eq $except_1 ) || ( $res eq $except_2 ) )
     {
         return 1;
+    }
+
+    if( exists $map_except_ref->{$res} )
+    {
+        if( exists $map_except_ref->{$res}->{$week} )
+        {
+            return 1;
+        }
     }
 
     return 0;
@@ -290,6 +298,7 @@ sub find_min_resource
     my $except_1 = shift;
     my $except_2 = shift;
     my $map_except_ref = shift;
+    my $week = shift;
 
     my $res_min_name = '';
     my $res_min = -1;
@@ -300,7 +309,7 @@ sub find_min_resource
         # first iteration to fill initial element
         if( $res_min == -1 )
         {
-            if( is_constrained( $res, $except_1, $except_2, $map_except_ref ) )
+            if( is_constrained( $res, $except_1, $except_2, $map_except_ref, $week ) )
             {
                 print "DBG: ignore $res (except)\n";
                 next;
@@ -335,6 +344,7 @@ sub find_min_resource_type
     my $except_2 = shift;
     my $map_res_ref = shift;
     my $map_except_ref = shift;
+    my $week = shift;
 
     #print "DBG: find_min_resource_type $type $except_1 $except_2\n";
 
@@ -347,7 +357,7 @@ sub find_min_resource_type
 
     my $stat_ref = $map_res_ref->{$type};
 
-    return find_min_resource( $stat_ref, $except_1, $except_2, $map_except_ref );
+    return find_min_resource( $stat_ref, $except_1, $except_2, $map_except_ref, $week );
 }
 
 ###############################################
@@ -411,13 +421,13 @@ sub generate_plan
     for( $i = $week; $i <= 52; $i = $i + 1 )
     {
 
-        my ( $res_1, $res_min_1 ) = find_min_resource_type( $type_1, 0, $prev_duty, $map_res_ref, $map_except_ref );
+        my ( $res_1, $res_min_1 ) = find_min_resource_type( $type_1, 0, $prev_duty, $map_res_ref, $map_except_ref, $i );
         check_iter_result( $res_min_1, $type_1, $i );
 
-        my ( $res_2, $res_min_2 ) = find_min_resource_type( $type_2, $res_1, $prev_duty, $map_res_ref, $map_except_ref );
+        my ( $res_2, $res_min_2 ) = find_min_resource_type( $type_2, $res_1, $prev_duty, $map_res_ref, $map_except_ref, $i );
         check_iter_result( $res_min_2, $type_2, $i );
 
-        my ( $res_3, $res_min_3 ) = find_min_resource_type( $type_3, $res_1, $res_2, $map_res_ref, $map_except_ref );
+        my ( $res_3, $res_min_3 ) = find_min_resource_type( $type_3, $res_1, $res_2, $map_res_ref, $map_except_ref, $i );
         check_iter_result( $res_min_3, $type_3, $i );
 
         validate_results( $res_1, $res_2, $res_3 );
