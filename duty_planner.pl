@@ -23,9 +23,10 @@
 # SKV FB10
 
 # 1.0 - FB10 - initial commit
+# 1.1 - FC08 - 1. bugfix: leading zeros from exception week were not cut 2. switched output to CSV
 
 
-my $VER="1.0";
+my $VER="1.1";
 
 ###############################################
 
@@ -106,7 +107,7 @@ sub date_to_week
 
     my $week = $dt->strftime('%W');
 
-    return $week;
+    return $week + 0;
 }
 
 ###############################################
@@ -117,7 +118,7 @@ sub convert_date_or_week_to_week
 
     if( m#cw([0-9]*)# )
     {
-        return $1;
+        return $1 + 0;
     }
     elsif ( m#([0-9]*)-([0-9]*)-([0-9]*)#)
     {
@@ -144,6 +145,8 @@ sub add_exception_to_list
 
     my $week = convert_date_or_week_to_week( $date_or_week );
 
+    #print "DBG: $date_or_week -> week $week\n";       # DBG
+
     if( exists $except_list_ref->{$week} )
     {
         print STDERR "WARNING: week $week is already added to exception list for resource $name, line $line.\n";
@@ -152,6 +155,7 @@ sub add_exception_to_list
     {
         $except_list_ref->{$week} = 1;
         print STDERR "DBG: added week $week to exception list for resource $name.\n";       # DBG
+        #print STDERR "DBG: " . $except_list_ref->{$week} . "\n";       # DBG
     }
 }
 
@@ -193,7 +197,7 @@ sub parse_exception
     }
     else
     {
-        print STDERR "DBG: exception for resource $name.\n";       # DBG
+        print STDERR "DBG: exception for NEW resource $name.\n";       # DBG
 
         my %except_list;
 
@@ -411,10 +415,15 @@ sub get_absence_for_week
 
     foreach my $res ( sort keys %$map_except_ref )
     {
+        #print "DBG: get_absence_for_week $week: res $res "; # DBG
+
         if( exists $map_except_ref->{$res}->{$week} )
         {
+            #print "ABS";
             push @res, $res;
         }
+
+        #print "\n";
     }
 
     return @res;
@@ -435,7 +444,8 @@ sub generate_plan
 
     my $prev_duty = 0;
 
-    print "week: $type_1 $type_2 $type_3\n";
+    #print "week: $type_1 $type_2 $type_3\n";
+    print "week;$type_1;$type_2;$type_3;absence;stat1;stat2;stat3;\n";
 
     for( $i = $week; $i <= 52; $i = $i + 1 )
     {
@@ -459,7 +469,8 @@ sub generate_plan
 
         my @absence = get_absence_for_week( $map_except_ref, $i );
 
-        print "$i: $res_1 $res_2 $res_3 absence: @absence ---- $map_res_ref->{$type_1}->{$res_1} $map_res_ref->{$type_2}->{$res_2} $map_res_ref->{$type_3}->{$res_3}\n";
+        #print "$i: $res_1 $res_2 $res_3 absence: @absence ---- $map_res_ref->{$type_1}->{$res_1} $map_res_ref->{$type_2}->{$res_2} $map_res_ref->{$type_3}->{$res_3}\n";
+        print "$i;$res_1;$res_2;$res_3;@absence;$map_res_ref->{$type_1}->{$res_1};$map_res_ref->{$type_2}->{$res_2};$map_res_ref->{$type_3}->{$res_3};\n";
     }
 }
 
