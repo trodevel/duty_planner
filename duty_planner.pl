@@ -25,9 +25,10 @@
 # 1.0 - FB10 - initial commit
 # 1.1 - FC08 - 1. bugfix: leading zeros from exception week were not cut 2. switched output to CSV
 # 1.2 - FC16 - bugfix: empty lines were not skipped
+# 1.3 - FC16 - tries to reiterate type_2 when no resource can be found for type_3
 
 
-my $VER="1.2";
+my $VER="1.3";
 
 ###############################################
 
@@ -282,9 +283,9 @@ close RN;
 
 sub is_constrained
 {
-    my ( $res, $except_1, $except_2, $map_except_ref, $week ) = @_;
+    my ( $res, $except_1, $except_2, $except_3, $map_except_ref, $week ) = @_;
 
-    if( ( $res eq $except_1 ) || ( $res eq $except_2 ) )
+    if( ( $res eq $except_1 ) || ( $res eq $except_2 ) || ( $res eq $except_3 ) )
     {
         return 1;
     }
@@ -307,6 +308,7 @@ sub find_min_resource
     my $map_stat_ref = shift;
     my $except_1 = shift;
     my $except_2 = shift;
+    my $except_3 = shift;
     my $map_except_ref = shift;
     my $week = shift;
 
@@ -319,7 +321,7 @@ sub find_min_resource
         # first iteration to fill initial element
         if( $res_min == -1 )
         {
-            if( is_constrained( $res, $except_1, $except_2, $map_except_ref, $week ) )
+            if( is_constrained( $res, $except_1, $except_2, $except_3, $map_except_ref, $week ) )
             {
                 print "DBG: ignore $res (except)\n";
                 next;
@@ -332,7 +334,7 @@ sub find_min_resource
 
         if( $map_stat_ref->{$res} < $res_min )
         {
-            if( is_constrained( $res, $except_1, $except_2, $map_except_ref, $week ) )
+            if( is_constrained( $res, $except_1, $except_2, $except_3, $map_except_ref, $week ) )
             {
                 print "DBG: ignore $res (except)\n";
                 next;
@@ -352,6 +354,7 @@ sub find_min_resource_type
     my $type = shift;
     my $except_1 = shift;
     my $except_2 = shift;
+    my $except_3 = shift;
     my $map_res_ref = shift;
     my $map_except_ref = shift;
     my $week = shift;
@@ -367,7 +370,11 @@ sub find_min_resource_type
 
     my $stat_ref = $map_res_ref->{$type};
 
-    return find_min_resource( $stat_ref, $except_1, $except_2, $map_except_ref, $week );
+    my ( $res, $res_min ) = find_min_resource( $stat_ref, $except_1, $except_2, $except_3, $map_except_ref, $week );
+
+    print "DBG: found $type -> $res ($res_min)\n"; # DBG
+
+    return ( $res, $res_min );
 }
 
 ###############################################
@@ -436,6 +443,47 @@ sub get_absence_for_week
 }
 
 ###############################################
+sub find_plan_for_week
+{
+    my $map_res_ref = shift;
+    my $map_except_ref = shift;
+
+    my $week = shift;
+
+    my $type_1 = shift;
+    my $type_2 = shift;
+    my $type_3 = shift;
+
+    my $prev_duty = shift;
+
+
+    my ( $res_1, $res_min_1 ) = find_min_resource_type( $type_1, 0, $prev_duty, 0, $map_res_ref, $map_except_ref, $i );
+    check_iter_result( $res_min_1, $type_1, $i );
+
+    my ( $res_2, $res_min_2 ) = find_min_resource_type( $type_2, $res_1, $prev_duty, 0, $map_res_ref, $map_except_ref, $i );
+    check_iter_result( $res_min_2, $type_2, $i );
+
+    my ( $res_3, $res_min_3 ) = find_min_resource_type( $type_3, $res_1, $res_2, 0, $map_res_ref, $map_except_ref, $i );
+
+    # try to reiterate previous step
+    if( $res_min_3 == -1 )
+    {
+        printf "DBG: trying to reiterate ***\n";
+
+        my ( $new_res_2, $new_res_min_2 ) = find_min_resource_type( $type_2, $res_1, $prev_duty, $res_2, $map_res_ref, $map_except_ref, $i );
+        check_iter_result( $new_res_min_2, $type_2, $i );
+
+        ( $res_2, $res_min_2 ) = ( $new_res_2, $new_res_min_2 );
+
+        ( $res_3, $res_min_3 ) = find_min_resource_type( $type_3, $res_1, $res_2, 0, $map_res_ref, $map_except_ref, $i );
+        check_iter_result( $res_min_3, $type_3, $i );
+
+    }
+
+    return ( $res_1, $res_2, $res_3 );
+}
+
+###############################################
 
 sub generate_plan
 {
@@ -451,25 +499,12 @@ sub generate_plan
     my $prev_duty = 0;
 
     #print "week: $type_1 $type_2 $type_3\n";
-    print "week;$type_1;$type_2;$type_3;absence;stat1;stat2;stat3;\n";
+    print "week;$type_1;$type_2;$type_3;exceptions;stat1;stat2;stat3;\n";
 
     for( $i = $week; $i <= 52; $i = $i + 1 )
     {
 
-        my ( $res_1, $res_min_1 ) = find_min_resource_type( $type_1, 0, $prev_duty, $map_res_ref, $map_except_ref, $i );
-        check_iter_result( $res_min_1, $type_1, $i );
-
-        print "DBG: found $type_1 -> $res_1\n"; # DBG
-
-        my ( $res_2, $res_min_2 ) = find_min_resource_type( $type_2, $res_1, $prev_duty, $map_res_ref, $map_except_ref, $i );
-        check_iter_result( $res_min_2, $type_2, $i );
-
-        print "DBG: found $type_2 -> $res_2\n"; # DBG
-
-        my ( $res_3, $res_min_3 ) = find_min_resource_type( $type_3, $res_1, $res_2, $map_res_ref, $map_except_ref, $i );
-        check_iter_result( $res_min_3, $type_3, $i );
-
-        print "DBG: found $type_3 -> $res_3\n"; # DBG
+        my ( $res_1, $res_2, $res_3 ) = find_plan_for_week( $map_res_ref, $map_except_ref, $i, $type_1, $type_2, $type_3, $prev_duty );
 
         validate_results( $res_1, $res_2, $res_3 );
 
