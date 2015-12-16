@@ -24,9 +24,10 @@
 
 # 1.0 - FB10 - initial commit
 # 1.1 - FC08 - 1. bugfix: leading zeros from exception week were not cut 2. switched output to CSV
+# 1.2 - FC16 - bugfix: empty lines were not skipped
 
 
-my $VER="1.1";
+my $VER="1.2";
 
 ###############################################
 
@@ -239,6 +240,11 @@ sub read_resources
         chomp;
         $lines++;
 
+
+        # skip empty lines
+        s/^\s+//g; # no leading white spaces
+        next unless length;
+
 # sample resource file:
 #td ac sk ab abu skv ol
 #18p ac sk abu skv ol am hk
@@ -350,7 +356,7 @@ sub find_min_resource_type
     my $map_except_ref = shift;
     my $week = shift;
 
-    #print "DBG: find_min_resource_type $type $except_1 $except_2\n";
+    print "DBG: find_min_resource_type $type $except_1 $except_2\n";
 
 
     if( not exists $map_res_ref->{$type} )
@@ -453,11 +459,17 @@ sub generate_plan
         my ( $res_1, $res_min_1 ) = find_min_resource_type( $type_1, 0, $prev_duty, $map_res_ref, $map_except_ref, $i );
         check_iter_result( $res_min_1, $type_1, $i );
 
+        print "DBG: found $type_1 -> $res_1\n"; # DBG
+
         my ( $res_2, $res_min_2 ) = find_min_resource_type( $type_2, $res_1, $prev_duty, $map_res_ref, $map_except_ref, $i );
         check_iter_result( $res_min_2, $type_2, $i );
 
+        print "DBG: found $type_2 -> $res_2\n"; # DBG
+
         my ( $res_3, $res_min_3 ) = find_min_resource_type( $type_3, $res_1, $res_2, $map_res_ref, $map_except_ref, $i );
         check_iter_result( $res_min_3, $type_3, $i );
+
+        print "DBG: found $type_3 -> $res_3\n"; # DBG
 
         validate_results( $res_1, $res_2, $res_3 );
 
