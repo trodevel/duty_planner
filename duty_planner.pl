@@ -26,9 +26,10 @@
 # 1.1 - FC08 - 1. bugfix: leading zeros from exception week were not cut 2. switched output to CSV
 # 1.2 - FC16 - bugfix: empty lines were not skipped
 # 1.3 - FC16 - tries to reiterate type_2 when no resource can be found for type_3
+# 1.4 - 16418 - added parameter last week
 
 
-my $VER="1.3";
+my $VER="1.4";
 
 ###############################################
 
@@ -491,6 +492,7 @@ sub generate_plan
     my $map_except_ref = shift;
 
     my $week = shift;
+    my $last_week = shift;
 
     my $type_1 = shift;
     my $type_2 = shift;
@@ -501,7 +503,7 @@ sub generate_plan
     #print "week: $type_1 $type_2 $type_3\n";
     print "week;$type_1;$type_2;$type_3;exceptions;stat1;stat2;stat3;\n";
 
-    for( $i = $week; $i <= 52; $i = $i + 1 )
+    for( $i = $week; $i <= $last_week; $i = $i + 1 )
     {
 
         my ( $res_1, $res_2, $res_3 ) = find_plan_for_week( $map_res_ref, $map_except_ref, $i, $type_1, $type_2, $type_3, $prev_duty );
@@ -527,9 +529,9 @@ sub generate_plan
 print "duty_planner ver. $VER\n";
 
 my $num_args = $#ARGV + 1;
-if( $num_args < 2 || $num_args > 3 )
+if( $num_args < 2 || $num_args > 4 )
 {
-    print STDERR "\nUsage: duty_planner.sh <resources.txt> <status.txt> [<week>]\n";
+    print STDERR "\nUsage: duty_planner.sh <resources.txt> <status.txt> [<first_week> [<last_week>] ]\n";
     exit;
 }
 
@@ -537,21 +539,28 @@ my $resources = $ARGV[0];
 my $status = $ARGV[1];
 
 my $week = 1;
-if( $num_args == 3 )
+my $last_week = 52;
+
+if( $num_args >= 3 )
 {
     $week = $ARGV[2];
+}
+if( $num_args == 4 )
+{
+    $last_week = $ARGV[3];
 }
 
 print STDERR "resources  = $resources\n";
 print STDERR "status     = $status\n";
 print STDERR "first week = $week\n";
+print STDERR "last week  = $last_week\n";
 
 my %map_res;
 my %map_except;
 
 read_resources( $resources, \%map_res, \%map_except );
 
-generate_plan( \%map_res, \%map_except, $week, 'td', '18p', 'od' );
+generate_plan( \%map_res, \%map_except, $week, $last_week, 'td', '18p', 'od' );
 
 exit;
 
