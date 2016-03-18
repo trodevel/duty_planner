@@ -26,11 +26,11 @@
 # 1.1 - FC08 - 1. bugfix: leading zeros from exception week were not cut 2. switched output to CSV
 # 1.2 - FC16 - bugfix: empty lines were not skipped
 # 1.3 - FC16 - tries to reiterate type_2 when no resource can be found for type_3
-# 1.4 - 16418 - added parameter last week
-# 1.5 - 16418 - defined resource type for exceptions
+# 1.4 - 16318 - added parameter last week
+# 1.5 - 16318 - defined resource type for exceptions
+# 1.6 - 16318 - added dump_resources()
 
-
-my $VER="1.5";
+my $VER="1.6";
 
 ###############################################
 
@@ -62,6 +62,10 @@ sub add_resource_to_set
 }
 
 ###############################################
+
+# map resource stat
+
+# type -> name -> stat
 
 sub parse_resource
 {
@@ -279,9 +283,9 @@ sub read_resources
 #duty_resource td res3 res8 res1 res2 skv res4
 #duty_resource 18p res3 res8 res2 res9 res7 res4 res5
 #duty_resource od res3 res1 res2 res9 res6
-#except res3 cw17 2015-5-6 2015-5-7
-#except res8
-#except res2
+#except res3 * cw17 2015-5-6 2015-5-7
+#except res8 18p
+#except res2 od
 
     if( m#except .*# )
     {
@@ -575,6 +579,27 @@ sub generate_plan
 
 ###############################################
 
+sub dump_resources
+{
+    my $map_res_ref = shift;
+
+    print "\n";
+    print "resources:\n";
+    print "\n";
+
+    foreach my $type ( sort keys %$map_res_ref )
+    {
+        print "resource type $type:";
+        foreach my $name ( sort keys $map_res_ref->{$type} )
+        {
+            print " $name:" . $map_res_ref->{$type}->{$name};
+        }
+        print "\n";
+    }
+}
+
+###############################################
+
 sub dump_exceptions
 {
     my $map_except_ref = shift;
@@ -595,8 +620,6 @@ sub dump_exceptions
             print "\n";
         }
     }
-
-    print "\n";
 }
 
 ###############################################
@@ -634,7 +657,11 @@ my %map_except;
 
 read_resources( $resources, \%map_res, \%map_except );
 
+dump_resources( \%map_res );
+
 dump_exceptions( \%map_except );
+
+print "\n";
 
 generate_plan( \%map_res, \%map_except, $week, $last_week, 'td', '18p', 'od' );
 
