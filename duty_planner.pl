@@ -27,9 +27,10 @@
 # 1.2 - FC16 - bugfix: empty lines were not skipped
 # 1.3 - FC16 - tries to reiterate type_2 when no resource can be found for type_3
 # 1.4 - 16418 - added parameter last week
+# 1.5 - 16418 - defined resource type for exceptions
 
 
-my $VER="1.4";
+my $VER="1.5";
 
 ###############################################
 
@@ -56,7 +57,7 @@ sub add_resource_to_set
     else
     {
         $map_stat_ref->{$res} = 0;
-        print "DBG: added resource $res to type $type.\n";       # DBG
+        print STDERR "DBG: added resource $res to type $type.\n";       # DBG
     }
 }
 
@@ -70,17 +71,20 @@ sub parse_resource
 
     my @wrds = split( / /, $a );
 
-    my $type=$wrds[0];
     shift( @wrds );
 
-    print "DBG: resource type: " . $type . "\n";       # DBG
+    my $type=$wrds[0];
+
+    shift( @wrds );
+
+    print STDERR "DBG: resource type: " . $type . "\n";       # DBG
 
     my $stat_ref;
 
     if( exists $map_type_on_stat_ref->{$type} )
     {
         $stat_ref = $map_type_on_stat_ref->{$type};
-        print "DBG: existing resource type: " . $type . "\n";       # DBG
+        print STDERR "DBG: existing resource type: " . $type . "\n";       # DBG
     }
     else
     {
@@ -89,7 +93,7 @@ sub parse_resource
         $stat_ref = \%map_stat;
 
         $map_type_on_stat_ref->{$type} = $stat_ref;
-        print "DBG: new resource type: " . $type . "\n";       # DBG
+        print STDERR "DBG: new resource type: " . $type . "\n";       # DBG
     }
 
 
@@ -148,7 +152,7 @@ sub add_exception_to_list
 
     my $week = convert_date_or_week_to_week( $date_or_week );
 
-    #print "DBG: $date_or_week -> week $week\n";       # DBG
+    #print STDERR "DBG: $date_or_week -> week $week\n";       # DBG
 
     if( exists $except_list_ref->{$week} )
     {
@@ -163,6 +167,10 @@ sub add_exception_to_list
 }
 
 ###############################################
+
+# exception map
+
+# name -> type -> array: week
 
 sub parse_exception
 {
@@ -180,23 +188,43 @@ sub parse_exception
 
     if( $#wrds < 2 )
     {
-        print STDERR "WARNING: empty exception list for resource, line $line.\n";
+        print STDERR "ERROR: duty type for exception is not defined, line $line.\n";
+        exit;
+    }
+
+
+    if( $#wrds < 3 )
+    {
+        print STDERR "ERROR: empty exception list for resource, line $line.\n";
+        exit;
     }
 
     shift( @wrds );
 
-    my $name=$wrds[0];
+    my $name = $wrds[0];
+    my $type = $wrds[1];
 
     shift( @wrds );
+    shift( @wrds );
 
-    print STDERR "DBG: exception for resource $name.\n";       # DBG
+    print STDERR "DBG: exception for resource $name, type $type.\n";       # DBG
 
     my $except_list_ref;
 
     if( exists $map_name_on_except_ref->{$name} )
     {
-        print STDERR "DBG: exception for existing resource $name.\n";       # DBG
-        $except_list_ref = $map_name_on_except_ref->{$name};
+        if( exists $map_name_on_except_ref->{$name}->{$type} )
+        {
+            print STDERR "DBG: exception for existing resource $name.\n";       # DBG
+            $except_list_ref = $map_name_on_except_ref->{$name}->{$type};
+        }
+        else
+        {
+            print STDERR "DBG: exception for existing resource $name, for NEW resource type $type.\n";       # DBG
+            my %except_list;
+            $except_list_ref = \%except_list;
+            $map_name_on_except_ref->{$name}->{$type} = $except_list_ref;
+        }
     }
     else
     {
@@ -206,7 +234,7 @@ sub parse_exception
 
         $except_list_ref = \%except_list;
 
-        $map_name_on_except_ref->{$name} = $except_list_ref;
+        $map_name_on_except_ref->{$name}->{$type} = $except_list_ref;
     }
 
 
@@ -248,12 +276,12 @@ sub read_resources
         next unless length;
 
 # sample resource file:
-#td ac sk ab abu skv ol
-#18p ac sk abu skv ol am hk
-#od ac ab abu skv mk
-#except ac cw17 2015-5-6 2015-5-7
-#except sk
-#except abu
+#duty_resource td res3 res8 res1 res2 skv res4
+#duty_resource 18p res3 res8 res2 res9 res7 res4 res5
+#duty_resource od res3 res1 res2 res9 res6
+#except res3 cw17 2015-5-6 2015-5-7
+#except res8
+#except res2
 
     if( m#except .*# )
     {
@@ -262,7 +290,7 @@ sub read_resources
 
         parse_exception( $lines, $_, $map_except_ref );
     }
-    elsif ( m#([a-zA-Z0-9]*) #)
+    elsif ( m#duty_resource ([a-zA-Z0-9]*) #)
     {
         print STDERR "DBG: resource line $_\n";
         $resrc_lines++;
@@ -284,18 +312,33 @@ close RN;
 
 sub is_constrained
 {
-    my ( $res, $except_1, $except_2, $except_3, $map_except_ref, $week ) = @_;
+    my ( $res, $except_1, $except_2, $except_3, $map_except_ref, $type, $week ) = @_;
 
     if( ( $res eq $except_1 ) || ( $res eq $except_2 ) || ( $res eq $except_3 ) )
     {
         return 1;
     }
 
+    my $type_any = "*";
+
     if( exists $map_except_ref->{$res} )
     {
-        if( exists $map_except_ref->{$res}->{$week} )
+        # check ANY duty type
+        if( exists $map_except_ref->{$res}->{$type_any} )
         {
-            return 1;
+            if( exists $map_except_ref->{$res}->{$type_any}->{$week} )
+            {
+                return 1;
+            }
+        }
+
+        # check given duty type
+        if( exists $map_except_ref->{$res}->{$type} )
+        {
+            if( exists $map_except_ref->{$res}->{$type}->{$week} )
+            {
+                return 1;
+            }
         }
     }
 
@@ -312,6 +355,7 @@ sub find_min_resource
     my $except_3 = shift;
     my $map_except_ref = shift;
     my $week = shift;
+    my $type = shift;
 
     my $res_min_name = '';
     my $res_min = -1;
@@ -322,9 +366,9 @@ sub find_min_resource
         # first iteration to fill initial element
         if( $res_min == -1 )
         {
-            if( is_constrained( $res, $except_1, $except_2, $except_3, $map_except_ref, $week ) )
+            if( is_constrained( $res, $except_1, $except_2, $except_3, $map_except_ref, $type, $week ) )
             {
-                print "DBG: ignore $res (except)\n";
+                print STDERR "DBG: ignore $res (except)\n";
                 next;
             }
 
@@ -335,9 +379,9 @@ sub find_min_resource
 
         if( $map_stat_ref->{$res} < $res_min )
         {
-            if( is_constrained( $res, $except_1, $except_2, $except_3, $map_except_ref, $week ) )
+            if( is_constrained( $res, $except_1, $except_2, $except_3, $map_except_ref, $type, $week ) )
             {
-                print "DBG: ignore $res (except)\n";
+                print STDERR "DBG: ignore $res (except)\n";
                 next;
             }
 
@@ -360,7 +404,7 @@ sub find_min_resource_type
     my $map_except_ref = shift;
     my $week = shift;
 
-    print "DBG: find_min_resource_type $type $except_1 $except_2\n";
+    print STDERR "DBG: find_min_resource_type $type $except_1 $except_2\n";
 
 
     if( not exists $map_res_ref->{$type} )
@@ -371,9 +415,9 @@ sub find_min_resource_type
 
     my $stat_ref = $map_res_ref->{$type};
 
-    my ( $res, $res_min ) = find_min_resource( $stat_ref, $except_1, $except_2, $except_3, $map_except_ref, $week );
+    my ( $res, $res_min ) = find_min_resource( $stat_ref, $except_1, $except_2, $except_3, $map_except_ref, $week, $type );
 
-    print "DBG: found $type -> $res ($res_min)\n"; # DBG
+    print STDERR "DBG: found $type -> $res ($res_min)\n"; # DBG
 
     return ( $res, $res_min );
 }
@@ -427,14 +471,19 @@ sub get_absence_for_week
 
     my @res=();
 
+    my $type_any = "*";
+
     foreach my $res ( sort keys %$map_except_ref )
     {
-        #print "DBG: get_absence_for_week $week: res $res "; # DBG
+        #print STDERR "DBG: get_absence_for_week $week: res $res "; # DBG
 
-        if( exists $map_except_ref->{$res}->{$week} )
+        if( exists $map_except_ref->{$res}->{$type_any} )
         {
-            #print "ABS";
-            push @res, $res;
+            if( exists $map_except_ref->{$res}->{$type_any}->{$week} )
+            {
+                #print "ABS";
+                push @res, $res;
+            }
         }
 
         #print "\n";
@@ -449,7 +498,7 @@ sub find_plan_for_week
     my $map_res_ref = shift;
     my $map_except_ref = shift;
 
-    my $week = shift;
+    my $i = shift;
 
     my $type_1 = shift;
     my $type_2 = shift;
@@ -526,6 +575,31 @@ sub generate_plan
 
 ###############################################
 
+sub dump_exceptions
+{
+    my $map_except_ref = shift;
+
+    print "\n";
+    print "exceptions:\n";
+    print "\n";
+
+    foreach my $resu ( sort keys %$map_except_ref )
+    {
+        foreach my $type ( sort keys $map_except_ref->{$resu} )
+        {
+            print "resource $resu: type $type:";
+            foreach my $week ( sort keys $map_except_ref->{$resu}->{$type} )
+            {
+                print " $week";
+            }
+            print "\n";
+        }
+    }
+
+    print "\n";
+}
+
+###############################################
 print "duty_planner ver. $VER\n";
 
 my $num_args = $#ARGV + 1;
@@ -559,6 +633,8 @@ my %map_res;
 my %map_except;
 
 read_resources( $resources, \%map_res, \%map_except );
+
+dump_exceptions( \%map_except );
 
 generate_plan( \%map_res, \%map_except, $week, $last_week, 'td', '18p', 'od' );
 
