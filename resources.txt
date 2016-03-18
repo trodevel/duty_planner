@@ -1,0 +1,27 @@
+duty_resource td res3 res8 res1 res2 res7 res9
+duty_resource 18p res3 res1 res8 res2 res9 res4 res5 res10 res6
+duty_resource od res9 res6 res3 res1 res2
+
+except res1 * cw13 cw18 cw31 cw32 cw33
+
+except res3 * cw01 cw14
+except res3 * cw14
+
+except res4 * cw18 cw35 cw36 cw37 cw51
+except res4 * 2016-2-5
+except res4 18p cw01 cw02
+
+except res5 * cw21 cw22
+except res5 18p cw01 cw02 cw03 cw04 cw05 cw06 cw07 cw08 cw09
+
+except res10 18p cw01 cw02 cw03 cw04 cw05 cw06 cw07 cw08 cw09 cw10 cw11 cw12 cw13
+
+except res9 * cw01 cw02 cw19 cw21 cw22 cw23 cw24
+except res9 * 2016-3-24
+except res9 td cw12 cw13 cw14 cw15 cw16 cw17 cw18 cw19 cw20 cw21 cw22 cw23 cw24 cw25
+
+except res6 * cw01 cw02 cw24
+
+except res8 * cw12 cw26 cw27 cw28 cw39 cw52
+
+except res7 * cw22 cw23
