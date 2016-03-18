@@ -29,8 +29,9 @@
 # 1.4 - 16318 - added parameter last week
 # 1.5 - 16318 - defined resource type for exceptions
 # 1.6 - 16318 - added dump_resources()
+# 1.7 - 16319 - added reading of status file
 
-my $VER="1.6";
+my $VER="1.7";
 
 ###############################################
 
@@ -51,7 +52,7 @@ sub add_resource_to_set
 
     if( exists $map_stat_ref->{$res} )
     {
-        print STDERR "ERROR: resource $res already defined for type $type, line $line.\n";
+        print "ERROR: resource $res already defined for type $type, line $line.\n";
         exit;
     }
     else
@@ -59,6 +60,39 @@ sub add_resource_to_set
         $map_stat_ref->{$res} = 0;
         print STDERR "DBG: added resource $res to type $type.\n";       # DBG
     }
+}
+
+###############################################
+
+sub update_resource_status
+{
+    my $line = shift;
+    my $type = shift;
+    my $map_stat_ref = shift || die "no stat map";
+    my $res_stat = shift;
+
+    my @wrds = split( /:/, $res_stat );
+
+    print STDERR "DBG: line $line, res_stat = $res_stat, num wrds = $#wrds, $wrds[0], $wrds[1]\n";
+
+    if( $#wrds != 1 )
+    {
+        print "ERROR: broken status for type $type, line $line.\n";
+        exit;
+    }
+
+    my $res = $wrds[0];
+    my $status = $wrds[1] + 0;
+
+    print STDERR "DBG: updated status for resource $res = $status of type $type, line $line.\n";
+
+    if( not exists $map_stat_ref->{$res} )
+    {
+        print "ERROR: unknwon resource $res for type $type, line $line.\n";
+        exit;
+    }
+
+    $map_stat_ref->{$res} = $status;
 }
 
 ###############################################
@@ -109,6 +143,42 @@ sub parse_resource
 
 ###############################################
 
+# map resource stat
+
+# type -> name -> stat
+
+sub parse_resource_status
+{
+    my $line = shift;
+    my $a = shift;
+    my $map_type_on_stat_ref = shift || die "no type on stat map";
+
+    my @wrds = split( / /, $a );
+
+    shift( @wrds );
+
+    my $type=$wrds[0];
+
+    shift( @wrds );
+
+    print STDERR "DBG: resource type: $type\n";       # DBG
+
+    if( not exists $map_type_on_stat_ref->{$type} )
+    {
+        print "FATAL: unknown resource type: $type, line $line\n";
+        exit;
+    }
+
+    my $stat_ref = $map_type_on_stat_ref->{$type};
+
+    foreach( @wrds )
+    {
+        update_resource_status( $line, $type, $stat_ref, $_ );
+    }
+}
+
+###############################################
+
 sub date_to_week
 {
 
@@ -137,7 +207,7 @@ sub convert_date_or_week_to_week
     }
     else
     {
-        print STDERR "FATAL: date in unknown format $_\n";
+        print "FATAL: date in unknown format $_\n";
         exit;
     }
 
@@ -160,7 +230,7 @@ sub add_exception_to_list
 
     if( exists $except_list_ref->{$week} )
     {
-        print STDERR "WARNING: week $week is already added to exception list for resource $name, line $line.\n";
+        print "WARNING: week $week is already added to exception list for resource $name, line $line.\n";
     }
     else
     {
@@ -186,20 +256,20 @@ sub parse_exception
 
     if( $#wrds < 1 )
     {
-        print STDERR "ERROR: exception without resource name, line $line.\n";
+        print "ERROR: exception without resource name, line $line.\n";
         exit;
     }
 
     if( $#wrds < 2 )
     {
-        print STDERR "ERROR: duty type for exception is not defined, line $line.\n";
+        print "ERROR: duty type for exception is not defined, line $line.\n";
         exit;
     }
 
 
     if( $#wrds < 3 )
     {
-        print STDERR "ERROR: empty exception list for resource, line $line.\n";
+        print "ERROR: empty exception list for resource, line $line.\n";
         exit;
     }
 
@@ -250,6 +320,58 @@ sub parse_exception
 
 ###############################################
 
+sub read_status
+{
+    my $filename = shift;
+    my $map_res_ref = shift;
+
+    unless( -e $filename )
+    {
+        print "WARNING: status file $filename doesn't exist\n";
+        return;
+    }
+
+    my $lines = 0;
+    my $resrc_lines=0;
+
+    print "Reading status $filename ...\n";
+    open RN, "<", $filename;
+
+    while( <RN> )
+    {
+        chomp;
+        $lines++;
+
+
+        # skip empty lines
+        s/^\s+//g; # no leading white spaces
+        next unless length;
+
+# sample status file:
+#type td res3:1 res8:6 res1:1 res2:0 skv:0 res4:0
+#type 18p res3:1 res8:2 res2:1 res9:3 res7:2 res4:2 res5:2
+#type od res3:1 res1:1 res2:2 res9:0 res6:1
+
+    if ( m#type ([a-zA-Z0-9]*) #)
+    {
+        print STDERR "DBG: resource line $_\n";
+        $resrc_lines++;
+
+        parse_resource_status( $lines, $_, $map_res_ref );
+    }
+    else
+    {
+        print STDERR "DBG: unknown line $lines, $_\n";
+        exit;
+    }
+}
+
+close RN;
+
+}
+
+###############################################
+
 sub read_resources
 {
     my $filename = shift;
@@ -258,7 +380,7 @@ sub read_resources
 
     unless( -e $filename )
     {
-        print STDERR "ERROR: resource file $filename doesn't exist\n";
+        print "ERROR: resource file $filename doesn't exist\n";
         exit;
     }
 
@@ -266,7 +388,7 @@ sub read_resources
     my $except_lines=0;
     my $resrc_lines=0;
 
-    print "Reading $filename...\n";
+    print "Reading resources $filename ...\n";
     open RN, "<", $filename;
 
     while( <RN> )
@@ -311,7 +433,6 @@ sub read_resources
 close RN;
 
 }
-
 ###############################################
 
 sub is_constrained
@@ -413,7 +534,7 @@ sub find_min_resource_type
 
     if( not exists $map_res_ref->{$type} )
     {
-        print STDERR "FATAL: cannot find resource type $type\n";       # DBG
+        print "FATAL: cannot find resource type $type\n";       # DBG
         exit
     }
 
@@ -437,7 +558,7 @@ sub check_iter_result
 
     if( $res == -1 )
     {
-        print STDERR "ERROR: cannot find resource of type $type, week $iter\n";
+        print "ERROR: cannot find resource of type $type, week $iter\n";
         exit;
     }
 }
@@ -450,19 +571,19 @@ sub validate_results
 
     if( $res_1 eq $res_2 )
     {
-        print STDERR "ERROR: validation failed: $res_1 $res_2\n";
+        print "ERROR: validation failed: $res_1 $res_2\n";
         exit;
     }
 
     if( $res_1 eq $res_3 )
     {
-        print STDERR "ERROR: validation failed: $res_1 $res_3\n";
+        print "ERROR: validation failed: $res_1 $res_3\n";
         exit;
     }
 
     if( $res_2 eq $res_3 )
     {
-        print STDERR "ERROR: validation failed: $res_2 $res_3\n";
+        print "ERROR: validation failed: $res_2 $res_3\n";
         exit;
     }
 }
@@ -522,7 +643,7 @@ sub find_plan_for_week
     # try to reiterate previous step
     if( $res_min_3 == -1 )
     {
-        printf "DBG: trying to reiterate ***\n";
+        printf STDERR "DBG: trying to reiterate ***\n";
 
         my ( $new_res_2, $new_res_min_2 ) = find_min_resource_type( $type_2, $res_1, $prev_duty, $res_2, $map_res_ref, $map_except_ref, $i );
         check_iter_result( $new_res_min_2, $type_2, $i );
@@ -589,7 +710,7 @@ sub dump_resources
 
     foreach my $type ( sort keys %$map_res_ref )
     {
-        print "resource type $type:";
+        print "type $type:";
         foreach my $name ( sort keys $map_res_ref->{$type} )
         {
             print " $name:" . $map_res_ref->{$type}->{$name};
@@ -657,6 +778,8 @@ my %map_except;
 
 read_resources( $resources, \%map_res, \%map_except );
 
+read_status( $status, \%map_res );
+
 dump_resources( \%map_res );
 
 dump_exceptions( \%map_except );
@@ -664,6 +787,10 @@ dump_exceptions( \%map_except );
 print "\n";
 
 generate_plan( \%map_res, \%map_except, $week, $last_week, 'td', '18p', 'od' );
+
+dump_resources( \%map_res );
+
+print "\n";
 
 exit;
 
