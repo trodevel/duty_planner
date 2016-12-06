@@ -30,16 +30,18 @@
 # 1.5 - 16318 - defined resource type for exceptions
 # 1.6 - 16318 - added dump_resources()
 # 1.7 - 16319 - added reading of status file
+# 1.8 - 16c06 - added output of the first and the last days of the week
 
-my $VER="1.7";
+my $VER="1.8";
 
 ###############################################
 
-#use strict;
+use strict;
 use warnings;
 use 5.010;
 
 use Time::Piece;    # date_to_week()
+require 'DateTools.pm';
 
 ###############################################
 
@@ -662,6 +664,7 @@ sub find_plan_for_week
 
 sub generate_plan
 {
+    my $year        = shift;
     my $map_res_ref = shift;
     my $map_except_ref = shift;
 
@@ -675,9 +678,9 @@ sub generate_plan
     my $prev_duty = 0;
 
     #print "week: $type_1 $type_2 $type_3\n";
-    print "week;$type_1;$type_2;$type_3;exceptions;stat1;stat2;stat3;\n";
+    print "week;mm1;dd1;yy2;mm2;dd2;$type_1;$type_2;$type_3;exceptions;stat1;stat2;stat3;\n";
 
-    for( $i = $week; $i <= $last_week; $i = $i + 1 )
+    for( my $i = $week; $i <= $last_week; $i = $i + 1 )
     {
 
         my ( $res_1, $res_2, $res_3 ) = find_plan_for_week( $map_res_ref, $map_except_ref, $i, $type_1, $type_2, $type_3, $prev_duty );
@@ -692,8 +695,11 @@ sub generate_plan
 
         my @absence = get_absence_for_week( $map_except_ref, $i );
 
+        my( $year1, $month1, $day1 ) = DateTools::get_monday_of_week( $i, $year );
+        my( $year2, $month2, $day2 ) = DateTools::get_sunday_of_week( $i, $year );
+
         #print "$i: $res_1 $res_2 $res_3 absence: @absence ---- $map_res_ref->{$type_1}->{$res_1} $map_res_ref->{$type_2}->{$res_2} $map_res_ref->{$type_3}->{$res_3}\n";
-        print "$i;$res_1;$res_2;$res_3;@absence;$map_res_ref->{$type_1}->{$res_1};$map_res_ref->{$type_2}->{$res_2};$map_res_ref->{$type_3}->{$res_3};\n";
+        print "$i;$month1;$day1;$year2;$month2;$day2;$res_1;$res_2;$res_3;@absence;$map_res_ref->{$type_1}->{$res_1};$map_res_ref->{$type_2}->{$res_2};$map_res_ref->{$type_3}->{$res_3};\n";
     }
 }
 
@@ -747,27 +753,29 @@ sub dump_exceptions
 print "duty_planner ver. $VER\n";
 
 my $num_args = $#ARGV + 1;
-if( $num_args < 2 || $num_args > 4 )
+if( $num_args < 3 || $num_args > 5 )
 {
-    print STDERR "\nUsage: duty_planner.sh <resources.txt> <status.txt> [<first_week> [<last_week>] ]\n";
+    print STDERR "\nUsage: duty_planner.sh <year> <resources.txt> <status.txt> [<first_week> [<last_week>] ]\n";
     exit;
 }
 
-my $resources = $ARGV[0];
-my $status = $ARGV[1];
+my $year        = $ARGV[0];
+my $resources   = $ARGV[1];
+my $status      = $ARGV[2];
 
 my $week = 1;
 my $last_week = 52;
 
-if( $num_args >= 3 )
+if( $num_args >= 4 )
 {
-    $week = $ARGV[2];
+    $week = $ARGV[3];
 }
-if( $num_args == 4 )
+if( $num_args == 5 )
 {
-    $last_week = $ARGV[3];
+    $last_week = $ARGV[4];
 }
 
+print STDERR "year       = $year\n";
 print STDERR "resources  = $resources\n";
 print STDERR "status     = $status\n";
 print STDERR "first week = $week\n";
@@ -786,7 +794,7 @@ dump_exceptions( \%map_except );
 
 print "\n";
 
-generate_plan( \%map_res, \%map_except, $week, $last_week, 'td', '18p', 'od' );
+generate_plan( $year, \%map_res, \%map_except, $week, $last_week, 'td', '18p', 'od' );
 
 dump_resources( \%map_res );
 
