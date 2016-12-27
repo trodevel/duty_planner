@@ -31,8 +31,9 @@
 # 1.6 - 16318 - added dump_resources()
 # 1.7 - 16319 - added reading of status file
 # 1.8 - 16c06 - added output of the first and the last days of the week
+# 1.9 - 16c27 - 1. ignored empty exceptions in exception file 2. added one more check to validate_results() 3. added output of the first year
 
-my $VER="1.8";
+my $VER="1.9";
 
 ###############################################
 
@@ -271,8 +272,8 @@ sub parse_exception
 
     if( $#wrds < 3 )
     {
-        print "ERROR: empty exception list for resource, line $line.\n";
-        exit;
+        print "WARNING: empty exception list for resource, line $line.\n";
+        return;
     }
 
     shift( @wrds );
@@ -569,7 +570,13 @@ sub check_iter_result
 
 sub validate_results
 {
-    my( $res_1, $res_2, $res_3 ) = @_;
+    my( $res_1, $res_2, $res_3, $prev_duty ) = @_;
+
+    if( $res_1 eq $prev_duty )
+    {
+        print "ERROR: validation failed: $res_1 $prev_duty\n";
+        exit;
+    }
 
     if( $res_1 eq $res_2 )
     {
@@ -678,14 +685,14 @@ sub generate_plan
     my $prev_duty = 0;
 
     #print "week: $type_1 $type_2 $type_3\n";
-    print "week;mm1;dd1;yy2;mm2;dd2;$type_1;$type_2;$type_3;exceptions;stat1;stat2;stat3;\n";
+    print "week;yy1;mm1;dd1;yy2;mm2;dd2;$type_1;$type_2;$type_3;exceptions;stat1;stat2;stat3;\n";
 
     for( my $i = $week; $i <= $last_week; $i = $i + 1 )
     {
 
         my ( $res_1, $res_2, $res_3 ) = find_plan_for_week( $map_res_ref, $map_except_ref, $i, $type_1, $type_2, $type_3, $prev_duty );
 
-        validate_results( $res_1, $res_2, $res_3 );
+        validate_results( $res_1, $res_2, $res_3, $prev_duty );
 
         $prev_duty = $res_3;
 
@@ -699,7 +706,7 @@ sub generate_plan
         my( $year2, $month2, $day2 ) = DateTools::get_sunday_of_week( $i, $year );
 
         #print "$i: $res_1 $res_2 $res_3 absence: @absence ---- $map_res_ref->{$type_1}->{$res_1} $map_res_ref->{$type_2}->{$res_2} $map_res_ref->{$type_3}->{$res_3}\n";
-        print "$i;$month1;$day1;$year2;$month2;$day2;$res_1;$res_2;$res_3;@absence;$map_res_ref->{$type_1}->{$res_1};$map_res_ref->{$type_2}->{$res_2};$map_res_ref->{$type_3}->{$res_3};\n";
+        print "$i;$year1;$month1;$day1;$year2;$month2;$day2;$res_1;$res_2;$res_3;@absence;$map_res_ref->{$type_1}->{$res_1};$map_res_ref->{$type_2}->{$res_2};$map_res_ref->{$type_3}->{$res_3};\n";
     }
 }
 
