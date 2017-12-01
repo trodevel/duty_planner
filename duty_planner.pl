@@ -33,14 +33,16 @@
 # 1.8 - 16c06 - added output of the first and the last days of the week
 # 1.9 - 16c27 - 1. ignored empty exceptions in exception file 2. added one more check to validate_results() 3. added output of the first year
 # 1.10 - 17102 - 1. moved reading of status and resources into a separate file 2. minor: renaming
+# 1.11 - 17b29 - 1. added command line arguments 2. added output into file
 
-my $VER="1.10";
+my $VER="1.11";
 
 ###############################################
 
 use strict;
 use warnings;
 use 5.010;
+use Getopt::Long;
 
 require 'DateTools.pm';
 require 'read_resources.pl';
@@ -291,6 +293,8 @@ sub generate_plan
     my $type_2 = shift;
     my $type_3 = shift;
 
+    my $res       = '';
+
     my $prev_duty = 0;
 
     #print "week: $type_1 $type_2 $type_3\n";
@@ -315,8 +319,11 @@ sub generate_plan
         my( $year2, $month2, $day2 ) = DateTools::get_sunday_of_week( $i, $year );
 
         #print "$i: $res_1 $res_2 $res_3 absence: @absence ---- $map_res_to_status_ref->{$type_1}->{$res_1} $map_res_to_status_ref->{$type_2}->{$res_2} $map_res_to_status_ref->{$type_3}->{$res_3}\n";
-        print "$i;$year1;$month1;$day1;$year2;$month2;$day2;$res_1;$res_2;$res_3;@absence;$map_res_to_status_ref->{$type_1}->{$res_1};$map_res_to_status_ref->{$type_2}->{$res_2};$map_res_to_status_ref->{$type_3}->{$res_3};\n";
+        #print "$i;$year1;$month1;$day1;$year2;$month2;$day2;$res_1;$res_2;$res_3;@absence;$map_res_to_status_ref->{$type_1}->{$res_1};$map_res_to_status_ref->{$type_2}->{$res_2};$map_res_to_status_ref->{$type_3}->{$res_3};\n";
+        $res = $res . "$i;$year1;$month1;$day1;$year2;$month2;$day2;$res_1;$res_2;$res_3;@absence;$map_res_to_status_ref->{$type_1}->{$res_1};$map_res_to_status_ref->{$type_2}->{$res_2};$map_res_to_status_ref->{$type_3}->{$res_3};\n";
     }
+
+    return $res;
 }
 
 
@@ -332,7 +339,7 @@ sub dump_resources
 
     foreach my $type ( sort keys %$map_res_to_status_ref )
     {
-        print "type $type:";
+        print "type $type";
         foreach my $name ( sort keys $map_res_to_status_ref->{$type} )
         {
             print " $name:" . $map_res_to_status_ref->{$type}->{$name};
@@ -366,36 +373,63 @@ sub dump_exceptions
 }
 
 ###############################################
+
+sub write_to_file
+{
+    my ( $filename, $str ) = @_;
+
+    open( OUTPUT, "> $filename" )
+       or die "Couldn't open file for writing: $!\n";
+
+    print OUTPUT $str;
+
+    close OUTPUT;
+}
+
+###############################################
+sub print_help
+{
+    print STDERR "\nUsage: duty_planner.sh --year <year> --resources <resources.txt> --status <status.txt> [--first_week <first_week>] [--last_week <last_week>]\n";
+    print STDERR "\nExamples:\n";
+    print STDERR "\nduty_planner.sh --year 2018 --resources resources.txt --status status.txt\n";
+    print STDERR "\nduty_planner.sh --year 2018 --resources resources.txt --status status.txt --first_week 10\n";
+    print STDERR "\nduty_planner.sh --year 2018 --resources resources.txt --status status.txt --last_week 20\n";
+    print STDERR "\nduty_planner.sh --year 2018 --resources resources.txt --status status.txt --first_week 10 --last_week 20\n";
+    print STDERR "\n";
+    exit
+}
+###############################################
 print "duty_planner ver. $VER\n";
 
-my $num_args = $#ARGV + 1;
-if( $num_args < 3 || $num_args > 5 )
-{
-    print STDERR "\nUsage: duty_planner.sh <year> <resources.txt> <status.txt> [<first_week> [<last_week>] ]\n";
-    exit;
-}
+my $year;
+my $resources;
+my $status;
+my $output_file = 'plan.csv';
+my $verbose     = 0;
 
-my $year        = $ARGV[0];
-my $resources   = $ARGV[1];
-my $status      = $ARGV[2];
+my $first_week = 1;
+my $last_week  = 52;
 
-my $week = 1;
-my $last_week = 52;
+GetOptions(
+            "year=i"            => \$year,         # numeric
+            "resources=s"       => \$resources,    # string
+            "status=s"          => \$status,       # string
+            "output=s"          => \$output_file,  # string
+            "first_week:i"      => \$first_week,   # numeric
+            "last_week:i"       => \$last_week,    # numeric
+            "verbose"           => \$verbose   )   # flag
+  or die("Error in command line arguments\n");
 
-if( $num_args >= 4 )
-{
-    $week = $ARGV[3];
-}
-if( $num_args == 5 )
-{
-    $last_week = $ARGV[4];
-}
+print STDERR "year        = $year\n";
+print STDERR "resources   = $resources\n";
+print STDERR "status      = $status\n";
+print STDERR "output file = $output_file\n";
+print STDERR "first week  = $first_week\n";
+print STDERR "last week   = $last_week\n";
 
-print STDERR "year       = $year\n";
-print STDERR "resources  = $resources\n";
-print STDERR "status     = $status\n";
-print STDERR "first week = $week\n";
-print STDERR "last week  = $last_week\n";
+&print_help if not defined $year;
+&print_help if not defined $resources;
+&print_help if not defined $status;
 
 my %map_res_to_status;
 my %map_except;
@@ -410,7 +444,9 @@ dump_exceptions( \%map_except );
 
 print "\n";
 
-generate_plan( $year, \%map_res_to_status, \%map_except, $week, $last_week, 'td', '18p', 'od' );
+my $plan = generate_plan( $year, \%map_res_to_status, \%map_except, $first_week, $last_week, 'td', '18p', 'od' );
+
+write_to_file( $output_file, $plan );
 
 dump_resources( \%map_res_to_status );
 
