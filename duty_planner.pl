@@ -34,8 +34,9 @@
 # 1.9 - 16c27 - 1. ignored empty exceptions in exception file 2. added one more check to validate_results() 3. added output of the first year
 # 1.10 - 17102 - 1. moved reading of status and resources into a separate file 2. minor: renaming
 # 1.11 - 17b29 - 1. added command line arguments 2. added output into file
+# 1.12 - 18702 - minor: refinements in debug output
 
-my $VER="1.11";
+my $VER="1.12";
 
 ###############################################
 
@@ -143,7 +144,7 @@ sub find_min_resource_type
     my $map_except_ref = shift;
     my $week = shift;
 
-    print STDERR "DBG: find_min_resource_type $type $except_1 $except_2\n";
+    print STDERR "DBG: find_min_resource_type cw${week} $type except: $except_1 $except_2\n";
 
 
     if( not exists $map_res_to_status_ref->{$type} )
