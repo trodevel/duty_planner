@@ -33,6 +33,7 @@
 # 1.8 - 16c06 - added output of the first and the last days of the week
 # 1.9 - 16c27 - 1. ignored empty exceptions in exception file 2. added one more check to validate_results() 3. added output of the first year
 # 1.10 - 17101 - 1. moved reading of status and resources into a separate file
+# 1.11 - 19123 - bugfix: date_to_week() didn't return ISO week number
 
 ###############################################
 
@@ -183,11 +184,19 @@ sub parse_resource_status
 sub date_to_week
 {
 
+# should return ISO week number
+# http://man7.org/linux/man-pages/man3/strftime.3.html
+
+#       %V     The ISO 8601 week number (see NOTES) of the current year as a
+#              decimal number, range 01 to 53, where week 1 is the first week
+#              that has at least 4 days in the new year.  See also %U and %W.
+#              (Calculated from tm_year, tm_yday, and tm_wday.)  (SU)
+
     my $date = shift;
 
     my $dt = Time::Piece->strptime($date, '%Y-%m-%d');
 
-    my $week = $dt->strftime('%W');
+    my $week = $dt->strftime('%V');
 
     return $week + 0;
 }
