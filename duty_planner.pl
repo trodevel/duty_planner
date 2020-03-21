@@ -35,8 +35,9 @@
 # 1.10 - 17102 - 1. moved reading of status and resources into a separate file 2. minor: renaming
 # 1.11 - 17b29 - 1. added command line arguments 2. added output into file
 # 1.12 - 18702 - minor: refinements in debug output
+# 1.13 - 20320 - updated to a newer Perl 5.16
 
-my $VER="1.12";
+my $VER="1.13";
 
 ###############################################
 
@@ -341,7 +342,7 @@ sub dump_resources
     foreach my $type ( sort keys %$map_res_to_status_ref )
     {
         print "type $type";
-        foreach my $name ( sort keys $map_res_to_status_ref->{$type} )
+        foreach my $name ( sort keys %{ $map_res_to_status_ref->{$type} } )
         {
             print " $name:" . $map_res_to_status_ref->{$type}->{$name};
         }
@@ -361,10 +362,10 @@ sub dump_exceptions
 
     foreach my $resu ( sort keys %$map_except_ref )
     {
-        foreach my $type ( sort keys $map_except_ref->{$resu} )
+        foreach my $type ( sort keys %{ $map_except_ref->{$resu} } )
         {
             print "resource $resu: type $type:";
-            foreach my $week ( sort keys $map_except_ref->{$resu}->{$type} )
+            foreach my $week ( sort keys %{ $map_except_ref->{$resu}->{$type} } )
             {
                 print " $week";
             }
