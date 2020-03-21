@@ -34,6 +34,7 @@
 # 1.9 - 16c27 - 1. ignored empty exceptions in exception file 2. added one more check to validate_results() 3. added output of the first year
 # 1.10 - 17101 - 1. moved reading of status and resources into a separate file
 # 1.11 - 19123 - bugfix: date_to_week() didn't return ISO week number
+# 1.12 - 20320 - 1. ignored comments in resource file 2. made error messages more expressive
 
 ###############################################
 
@@ -45,16 +46,13 @@ use Time::Piece;    # date_to_week()
 
 ###############################################
 
-sub add_resource_to_set
+sub add_resource_to_set($$$$$)
 {
-    my $line = shift;
-    my $type = shift;
-    my $map_stat_ref = shift || die "no stat map";
-    my $res = shift;
+    my ( $filename, $line, $type, $map_stat_ref, $res ) = @_;
 
     if( exists $map_stat_ref->{$res} )
     {
-        print "ERROR: resource $res already defined for type $type, line $line.\n";
+        print "FATAL: resource $res already defined for type $type, file $filename:$line.\n";
         exit;
     }
     else
@@ -66,12 +64,9 @@ sub add_resource_to_set
 
 ###############################################
 
-sub update_resource_status
+sub update_resource_status($$$$$)
 {
-    my $line = shift;
-    my $type = shift;
-    my $map_stat_ref = shift || die "no stat map";
-    my $res_stat = shift;
+    my ( $filename, $line, $type, $map_stat_ref, $res_stat ) = @_;
 
     my @wrds = split( /:/, $res_stat );
 
@@ -79,7 +74,7 @@ sub update_resource_status
 
     if( $#wrds != 1 )
     {
-        print "ERROR: broken status for type $type, line $line.\n";
+        print "FATAL: broken status for type $type, file $filename:$line.\n";
         exit;
     }
 
@@ -90,7 +85,7 @@ sub update_resource_status
 
     if( not exists $map_stat_ref->{$res} )
     {
-        print "ERROR: unknwon resource $res for type $type, line $line.\n";
+        print "FATAL: unknown resource $res for type $type, file $filename:$line.\n";
         exit;
     }
 
@@ -103,11 +98,9 @@ sub update_resource_status
 
 # type -> name -> stat
 
-sub parse_resource
+sub parse_resource($$$$)
 {
-    my $line = shift;
-    my $a = shift;
-    my $map_type_on_stat_ref = shift || die "no type on stat map";
+    my ( $filename, $line, $a, $map_type_on_stat_ref ) = @_;
 
     my @wrds = split( / /, $a );
 
@@ -139,7 +132,7 @@ sub parse_resource
 
     foreach( @wrds )
     {
-        add_resource_to_set( $line, $type, $stat_ref, $_ );
+        add_resource_to_set( $filename, $line, $type, $stat_ref, $_ );
     }
 }
 
@@ -149,11 +142,9 @@ sub parse_resource
 
 # type -> name -> stat
 
-sub parse_resource_status
+sub parse_resource_status($$$$)
 {
-    my $line = shift;
-    my $a = shift;
-    my $map_type_on_stat_ref = shift || die "no type on stat map";
+    my ( $filename, $line, $a, $map_type_on_stat_ref ) = @_;
 
     my @wrds = split( / /, $a );
 
@@ -167,7 +158,7 @@ sub parse_resource_status
 
     if( not exists $map_type_on_stat_ref->{$type} )
     {
-        print "FATAL: unknown resource type: $type, line $line\n";
+        print "FATAL: unknown resource type: $type, file $filename:$line\n";
         exit;
     }
 
@@ -175,7 +166,7 @@ sub parse_resource_status
 
     foreach( @wrds )
     {
-        update_resource_status( $line, $type, $stat_ref, $_ );
+        update_resource_status( $filename, $line, $type, $stat_ref, $_ );
     }
 }
 
@@ -227,12 +218,9 @@ sub convert_date_or_week_to_week
 
 ###############################################
 
-sub add_exception_to_list
+sub add_exception_to_list($$$$$)
 {
-    my $line = shift;
-    my $name = shift;
-    my $except_list_ref = shift || die "no except list";
-    my $date_or_week = shift;
+    my ( $filename, $line, $name, $except_list_ref, $date_or_week ) = @_;
 
     my $week = convert_date_or_week_to_week( $date_or_week );
 
@@ -240,7 +228,7 @@ sub add_exception_to_list
 
     if( exists $except_list_ref->{$week} )
     {
-        print "WARNING: week $week is already added to exception list for resource $name, line $line.\n";
+        print "WARNING: week $week is already added to exception list for resource $name, file $filename:$line.\n";
     }
     else
     {
@@ -256,30 +244,28 @@ sub add_exception_to_list
 
 # name -> type -> array: week
 
-sub parse_exception
+sub parse_exception($$$$)
 {
-    my $line = shift;
-    my $a = shift;
-    my $map_name_on_except_ref = shift || die "no 'name on except' map";
+    my ( $filename, $line, $a, $map_name_on_except_ref ) = @_;
 
     my @wrds = split( / /, $a );
 
     if( $#wrds < 1 )
     {
-        print "ERROR: exception without resource name, line $line.\n";
+        print "FATAL: exception without resource name, file $filename:$line.\n";
         exit;
     }
 
     if( $#wrds < 2 )
     {
-        print "ERROR: duty type for exception is not defined, line $line.\n";
+        print "FATAL: duty type for exception is not defined, file $filename:$line.\n";
         exit;
     }
 
 
     if( $#wrds < 3 )
     {
-        print "WARNING: empty exception list for resource, line $line.\n";
+        print "WARNING: empty exception list for resource, file $filename:$line.\n";
         return;
     }
 
@@ -324,16 +310,15 @@ sub parse_exception
 
     foreach( @wrds )
     {
-        add_exception_to_list( $line, $name, $except_list_ref, $_ );
+        add_exception_to_list( $filename, $line, $name, $except_list_ref, $_ );
     }
 }
 
 ###############################################
 
-sub read_status
+sub read_status($$)
 {
-    my $filename = shift;
-    my $map_res_ref = shift;
+    my ( $filename, $map_res_ref ) = @_;
 
     unless( -e $filename )
     {
@@ -367,7 +352,7 @@ sub read_status
         print STDERR "DBG: resource line $_\n";
         $resrc_lines++;
 
-        parse_resource_status( $lines, $_, $map_res_ref );
+        parse_resource_status( $filename, $lines, $_, $map_res_ref );
     }
     else
     {
@@ -411,6 +396,9 @@ sub read_resources
         s/^\s+//g; # no leading white spaces
         next unless length;
 
+        # skip comments
+        next if /^#/;
+
 # sample resource file:
 #duty_resource td res3 res8 res1 res2 skv res4
 #duty_resource 18p res3 res8 res2 res9 res7 res4 res5
@@ -424,19 +412,19 @@ sub read_resources
         print STDERR "DBG: exception line $_\n";
         $except_lines++;
 
-        parse_exception( $lines, $_, $map_except_ref );
+        parse_exception( $filename, $lines, $_, $map_except_ref );
     }
     elsif ( m#duty_resource ([a-zA-Z0-9]*) #)
     {
         print STDERR "DBG: resource line $_\n";
         $resrc_lines++;
 
-        parse_resource( $lines, $_, $map_res_ref );
+        parse_resource( $filename, $lines, $_, $map_res_ref );
     }
     else
     {
-        print STDERR "DBG: unknown line $lines, $_\n";
-        next;
+        print STDERR "FATAL: unknown line $filename:$lines, $_\n";
+        exit;
     }
 }
 
