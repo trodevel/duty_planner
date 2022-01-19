@@ -198,6 +198,8 @@ sub convert_date_or_week_to_week
 {
     my $date_or_week = shift;
 
+    $date_or_week =~ s/^\s+|\s+$//g;
+
     if( m#cw([0-9]*)# )
     {
         return $1 + 0;
