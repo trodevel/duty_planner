@@ -198,6 +198,8 @@ sub convert_date_or_week_to_week
 {
     my $date_or_week = shift;
 
+    $date_or_week =~ s/^\s+|\s+$//g;
+
     if( m#cw([0-9]*)# )
     {
         return $1 + 0;
@@ -310,7 +312,16 @@ sub parse_exception($$$$)
 
     foreach( @wrds )
     {
-        add_exception_to_list( $filename, $line, $name, $except_list_ref, $_ );
+        my $date_or_week = $_;
+
+        $date_or_week =~ s/^\s+|\s+$//g;
+
+        if( $date_or_week eq "" )
+        {
+            next;
+        }
+
+        add_exception_to_list( $filename, $line, $name, $except_list_ref, $date_or_week );
     }
 }
 
