@@ -312,6 +312,8 @@ sub parse_exception($$$$)
 
     foreach( @wrds )
     {
+        $date_or_week = $_;
+
         $date_or_week =~ s/^\s+|\s+$//g;
 
         if( $date_or_week eq "" )
@@ -319,7 +321,7 @@ sub parse_exception($$$$)
             next;
         }
 
-        add_exception_to_list( $filename, $line, $name, $except_list_ref, $_ );
+        add_exception_to_list( $filename, $line, $name, $except_list_ref, $date_or_week );
     }
 }
 
