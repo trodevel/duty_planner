@@ -312,7 +312,7 @@ sub parse_exception($$$$)
 
     foreach( @wrds )
     {
-        $date_or_week = $_;
+        my $date_or_week = $_;
 
         $date_or_week =~ s/^\s+|\s+$//g;
 
